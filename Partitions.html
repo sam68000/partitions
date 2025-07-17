@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Partitions</title></head>
+<body>
+  <h2>Gestion des partitions</h2>
+  <form id="form">
+    Instrument: 
+    <select id="instrument" required>
+      <option value="">--Sélectionner--</option>
+      <option value="Vn">Violon</option>
+      <option value="Co">Cor</option>
+      <option value="CH">Chant</option>
+      <option value="ENS">Ensemble</option>
+    </select><br/>
+    Genre:
+    <select id="genre" required>
+      <option value="">--Sélectionner--</option>
+      <option value="CON">Concerto</option>
+      <option value="SON">Sonate</option>
+      <option value="ETU">Étude</option>
+      <option value="MEL">Mélodie</option>
+      <option value="QUA">Quatuor</option>
+      <option value="SYM">Symphonie</option>
+    </select><br/>
+    Compositeur (3 lettres): <input type="text" id="compositeur" maxlength="3" required><br/>
+    Numéro: <input type="number" id="numero" min="1" required><br/>
+    <button type="submit">Ajouter</button>
+  </form>
+
+  <input type="text" id="search" placeholder="Recherche..." oninput="filtrer()">
+
+  <table border="1" id="table" style="margin-top:20px; border-collapse:collapse;">
+    <thead><tr><th>Code</th><th>Instrument</th><th>Genre</th><th>Compositeur</th><th>Numéro</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  const scriptURL = 'https://script.google.com/macros/s/AKfycbzjnyMifPBWmkNiCfylzbstekzdPYjFshKMfDXoFErPXqHidjmKmVwZwV8jQ7lDNWM/exec';
+
+  function genererCode(instr, genre, compo, num) {
+    return instr + '-' + genre + '-' + compo.toUpperCase() + '-' + num.toString().padStart(3, '0');
+  }
+
+  async function envoyer(data) {
+    const res = await fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: {'Content-Type': 'application/json'}
+    });
+    return res.json();
+  }
+
+  async function charger() {
+    const res = await fetch(scriptURL);
+    return res.json();
+  }
+
+  function afficher(tableBody, data) {
+    tableBody.innerHTML = '';
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      row.forEach(cell => {
+        const td = document.createElement('td');
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
+      tableBody.appendChild(tr);
+    });
+  }
+
+  function filtrer() {
+    const filter = document.getElementById('search').value.toUpperCase();
+    const rows = document.querySelectorAll('#table tbody tr');
+    rows.forEach(r => {
+      r.style.display = r.textContent.toUpperCase().includes(filter) ? '' : 'none';
+    });
+  }
+
+  document.getElementById('form').onsubmit = async e => {
+    e.preventDefault();
+    const instr = document.getElementById('instrument').value;
+    const genre = document.getElementById('genre').value;
+    const compo = document.getElementById('compositeur').value.trim();
+    const num = document.getElementById('numero').value;
+    const code = genererCode(instr, genre, compo, num);
+    await envoyer({code, instrument: instr, genre, compositeur: compo.toUpperCase(), numero: num});
+    const data = await charger();
+    afficher(document.querySelector('#table tbody'), data);
+    e.target.reset();
+  };
+
+  window.onload = async () => {
+    const data = await charger();
+    afficher(document.querySelector('#table tbody'), data);
+  };
+</script>
+</body>
+</html>
